@@ -14,7 +14,7 @@
   
       /********************** INSTANCE **********************/
 
-      Adafruit_MMA8451 accelerometer; // Accelerometer instance
+      Adafruit_MMA8451 accelerometer = 0; // Accelerometer instance
 
       bool isEnabled; // Determines if the sensors are currently powered on and initilized
       
@@ -28,6 +28,16 @@
        */
       void initAccelerometer();
 
+      /**
+       * Gets a temperature measurement
+       */
+      uint16_t measureTemperature();
+
+      /**
+       * Gets a salinity measurement
+       */
+      uint16_t measureSalinity();
+
     public:
     
       /**
@@ -36,19 +46,19 @@
       static SensorManager* getInstance();
 
       /**
+       * Enables the power to the sensors and initilizes any required hardware
+       */
+      void enableSensors();
+
+      /**
+       * Disables the power to the sensors
+       */
+      void disableSensors();
+
+      /**
        * Checks if the node is moving enough to not burn out the motor
        */
       bool isMoving();
-
-      /**
-       * Gets a temperature measurement
-       */
-      uint16_t measureTemperature();
-
-       /**
-       * Gets a salinity measurement
-       */
-      uint16_t measureSalinity();
 
       /**
        * Take a new measurement
