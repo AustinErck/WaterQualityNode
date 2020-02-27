@@ -50,6 +50,24 @@ void SensorManager::initAccelerometer() {
   Serial.println("Accelerometer successfully initialized");
 }
 
+void SensorManager::initThermometer() {
+  // Create new instance of thermometer
+  thermometer = OneWire(TEMP_PIN);
+  
+  // Check connection to accelerometer
+  if(!thermometer.search(thermometerAddress)) {
+    Serial.println("Unable to initialize accelerometer");
+
+    // Keep trying to initialize accelerometer chip every 10 seconds
+    while (!thermometer.search(thermometerAddress)) {
+      thermometer.reset_search();
+      delay(10000); 
+    }
+  }
+  
+  Serial.println("Thermometer successfully initialized");
+}
+
 /********************** Public Functions **********************/
 
 SensorManager* SensorManager::getInstance() {
@@ -66,6 +84,7 @@ void SensorManager::enableSensors() {
 
   // Initilize sensors
   initAccelerometer();
+  initThermometer();
 
   isEnabled = true;
 }
@@ -78,6 +97,9 @@ void SensorManager::disableSensors() {
 
   // Clear accelerometer variable
   accelerometer = 0;
+
+  // Clear thermometer variable
+  thermometer = 0;
 }
 
 bool SensorManager::isMoving() {
@@ -107,10 +129,32 @@ uint16_t SensorManager::measureTemperature() {
     return 65535;
   }
 
-  // Calibration code goes here
+  thermometer.reset();
+  thermometer.select(thermometerAddress);
+  thermometer.write(0x44, 1); 
+
+  delay(1000); 
+
+  thermometer.reset();
+  thermometer.select(thermometerAddress);    
+  thermometer.write(0xBE);         // Read Scratchpad
+
+  byte data[12];
+  for (byte i = 0; i < 9; i++) {           // we need 9 bytes
+    data[i] = thermometer.read();
+  }
+
+  // Convert the data to actual temperature
+  // because the result is a 16 bit signed integer, it should
+  // be stored to an "int16_t" type, which is always 16 bits
+  // even when compiled on a 32 bit processor.
+  int16_t raw = (data[1] << 8) | data[0];
+  byte cfg = (data[4] & 0x60);
+  if (cfg == 0x00) raw = raw & ~7;  // 9 bit resolution, 93.75 ms
+  else if (cfg == 0x20) raw = raw & ~3; // 10 bit res, 187.5 ms
+  else if (cfg == 0x40) raw = raw & ~1; // 11 bit res, 375 ms
   
-  uint16_t analogVoltageValue = analogRead(TEMP_PIN);
-  return analogVoltageValue;
+  return raw;
 }
 
 uint16_t SensorManager::measureSalinity() {

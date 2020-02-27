@@ -10,16 +10,16 @@ void setup() {
   while(!Serial){};   // Wait for serial to start 
   Serial.println("Serial connection established!");
 
-  // (1) WAKE UP HERE
-
-  // (2) Init hardware
+  // (1) Init hardware
   DataManager* dataManager = DataManager::getInstance();
   RtcManager* rtcManager = RtcManager::getInstance();
   SensorManager* sensorManager = SensorManager::getInstance();
 
-  // (4) Take/save measurement
+  // (3) Take/save measurement
   Measurement measurement = sensorManager->takeMeasurement();
   //dataManager->addMeasurement(measurement);
+
+  // (8) Go to sleep
 
   /************************** NODE TEST **************************/
 
@@ -45,15 +45,19 @@ void setup() {
   /************************** RTC TEST **************************/ 
 
 
-  /*DS3232RTC Rtc(false);
+  DS3232RTC Rtc(false);
   Rtc.begin();
   time_t myTime = Rtc.get();
   Serial.print("Time since epoch: ");
-  Serial.println(myTime);*/
+  Serial.println(myTime);
   
   Serial.println("Setup complete!");
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
+    SensorManager* sensorManager = SensorManager::getInstance();
+
+   Serial.println(sensorManager->measureTemperature());
+   delay(1000);
 }
