@@ -19,10 +19,11 @@ void setup() {
   // (0) Initialize serial communication (DEBUG ONLY)
   Serial.begin(9600); // Set bits per second to 9600
   while(!Serial){};   // Wait for serial to start 
-  Serial.println("Serial connection established!");
+  Serial.println("Serial connection established!\n");
   #endif
 
   // Init hardware on start up (Formats storage, sets RTC if needed, checks connections to sensors, etc)
+  Serial.println("~~~~~~~~~~~~~~~~~~~~ Beginning Hardware Test ~~~~~~~~~~~~~~~~~~~~\n");
   HardwareManager::enableHardware();
   sensorManager = SensorManager::getInstance();
   dataManager = DataManager::getInstance();
@@ -32,7 +33,7 @@ void setup() {
   // Run tests if testing mode is enabled
   #ifdef TESTING
 
-    Serial.println("Beginning Storage Test\n");
+    Serial.println("~~~~~~~~~~~~~~~~~~~~ Beginning Storage Test ~~~~~~~~~~~~~~~~~~~~\n");
   
     // Create measurement
     Measurement measurement = sensorManager->takeMeasurement();
@@ -72,6 +73,9 @@ void setup() {
     Serial.println(readMeasurement.getTemperature()/16.0); //Divided by 16.0 to get actual temperature in C
     Serial.print("Salinity: ");
     Serial.println(readMeasurement.getSalinity());
+
+
+    Serial.println("~~~~~~~~~~~~~~~~~~~~ Beginning Sleep Test ~~~~~~~~~~~~~~~~~~~~\n");
     
     //rtcManager->goToSleep();
   #endif
