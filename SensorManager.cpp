@@ -5,7 +5,6 @@
 #include <Adafruit_MMA8451.h>
 #include <Adafruit_Sensor.h>
 
-#define POWER_PIN     16
 #define TEMP_PIN      14
 #define SALINITY_PIN  15
 #define ACCEL_ADDRESS 28
@@ -26,12 +25,9 @@ bool isEnabled = true;
 
 SensorManager::SensorManager() {
   Serial.println("Starting sensor manager...");
-
-  // Configure power control pin
-  pinMode(POWER_PIN, OUTPUT);
-
+  
   // Initilize sensors
-  enableSensors();
+  enableHardware();
 
   Serial.println("Sensor manager successfully initialized");
 }
@@ -82,22 +78,22 @@ SensorManager* SensorManager::getInstance() {
   return instance;
 }
 
-void SensorManager::enableSensors() {
-  // Enable power to sensors
-  digitalWrite(POWER_PIN, HIGH);
+void SensorManager::enableHardware() {
 
-  // Initilize sensors
+  // Do nothing if already enabled
+  if(isEnabled) {
+    return;
+  }
+
+  // Initilize sensors if not initilized
   initAccelerometer();
   initThermometer();
 
-  isEnabled = true;
+  ManagedHardware::enableHardware();
 }
 
-void SensorManager::disableSensors() {
-  isEnabled = false;
-
-  // Disable power to sensors
-  digitalWrite(POWER_PIN, LOW);
+void SensorManager::disableHardware() {
+  ManagedHardware::disableHardware();
 
   // Clear accelerometer variable
   accelerometer = 0;

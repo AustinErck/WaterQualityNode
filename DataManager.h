@@ -2,9 +2,10 @@
 #define DATAMANAGER_H
   #include <stdint.h>
 
+  #include "ManagedHardware.h"
   #include "Measurement.h"
 
-  class DataManager {
+  class DataManager: public ManagedHardware {
     private:
       /********************** STATIC **********************/
 
@@ -28,6 +29,12 @@
        * @param baseAddress: Base address to begin read at. Uses addresses baseAddress through (baseAddress + 4)
       */
       uint32_t read32(uint16_t baseAddress);
+
+      /**
+       * Reads 16 bits of data from FRAM
+       * @param baseAddress: Base address to begin read at. Uses addresses baseAddress through (baseAddress + 2)
+      */
+      uint16_t read16(uint16_t baseAddress);
 
       /**
        * Writes 32 bits of data to FRAM
@@ -73,6 +80,11 @@
       static DataManager* getInstance();
 
       /**
+       * Enables hardware
+      */
+      void enableHardware();
+
+      /**
        * Read node count from FRAM
       */
       uint8_t getNodeCount();
@@ -98,5 +110,11 @@
        * @param measurement: Measurement to save
       */
       uint16_t addMeasurement(Measurement measurement);
+
+      /**
+       * Get measurement from FRAM
+       * @param measurementIndex: Index of measurement
+      */
+      Measurement getMeasurement(uint16_t measurementIndex);
   };
 #endif

@@ -4,9 +4,10 @@
   #include <Adafruit_MMA8451.h>
   #include <OneWire.h>
 
+  #include "ManagedHardware.h"
   #include "Measurement.h"
 
-  class SensorManager {
+  class SensorManager: public ManagedHardware {
     private:
       /********************** STATIC **********************/
 
@@ -18,8 +19,6 @@
       Adafruit_MMA8451 accelerometer = 0; // Accelerometer instance
       OneWire thermometer = 0;            // Thermometer instance
       byte thermometerAddress[8];
-
-      bool isEnabled; // Determines if the sensors are currently powered on and initilized
       
       /** 
        *  Create an instance of SensorManager
@@ -46,12 +45,12 @@
       /**
        * Enables the power to the sensors and initilizes any required hardware
        */
-      void enableSensors();
+      void enableHardware();
 
       /**
        * Disables the power to the sensors
        */
-      void disableSensors();
+      void disableHardware();
 
       /**
        * Checks if the node is moving enough to not burn out the motor

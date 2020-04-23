@@ -1,10 +1,12 @@
 #include "Node.h"
 #include "Measurement.h"
+#include "HardwareManager.h"
 #include "DataManager.h"
 #include "RtcManager.h"
 #include "SensorManager.h"
 
-#define DEBUG 1
+#define DEBUG
+#define TESTING
 
 // Hardware managers
 DataManager* dataManager;
@@ -20,56 +22,59 @@ void setup() {
   Serial.println("Serial connection established!");
   #endif
 
-  // (1) Init hardware on start up (Formats storage, sets RTC if needed, checks connections to sensors, etc)
+  // Init hardware on start up (Formats storage, sets RTC if needed, checks connections to sensors, etc)
+  HardwareManager::enableHardware();
+  sensorManager = SensorManager::getInstance();
   dataManager = DataManager::getInstance();
   rtcManager = RtcManager::getInstance();
-  sensorManager = SensorManager::getInstance();
   Serial.println("Completed start up hardware initilization\n");
 
-  // (3) Take/save measurement
-  /*Measurement measurement = sensorManager->takeMeasurement();
-  //dataManager->addMeasurement(measurement);
-  Serial.print("Device: ");
-  Serial.println(measurement.getNodeUUID());
-  Serial.print("Datetime: ");
-  Serial.println(measurement.getDateTime());
-  Serial.print("Temp: ");
-  Serial.println(measurement.getTemperature()/16.0);
-  Serial.print("Salinity: ");
-  Serial.println(measurement.getSalinity());*/
+  // Run tests if testing mode is enabled
+  #ifdef TESTING
 
-  // (8) Go to sleep
-  //rtcManager->goToSleep();
+    Serial.println("Beginning Storage Test\n");
+  
+    // Create measurement
+    Measurement measurement = sensorManager->takeMeasurement();
 
-  /************************** NODE TEST **************************/
+    // Save measurement to FRAM
+    uint16_t measurementIndex = dataManager->addMeasurement(measurement);
 
-  /*dataManager->addNode(1234567890);
+    // Print initial measurement data
+    Serial.println("Initial measurement information:");
+    Serial.print("Device: ");
+    Serial.println(measurement.getNodeUUID());
+    Serial.print("Datetime: ");
+    Serial.println(measurement.getDateTime());
+    Serial.print("Temp: ");
+    Serial.println(measurement.getTemperature()/16.0); //Divided by 16.0 to get actual temperature in C
+    Serial.print("Salinity: ");
+    Serial.println(measurement.getSalinity());
 
-  uint32_t* nodes = dataManager->getNodes();
+    // Disables external hardware components
+    Serial.println("\nDisabling hardware");
+    HardwareManager::disableHardware();
+    
+    // Enables external hardware components
+    Serial.println("Enabling hardware");
+    HardwareManager::enableHardware();;
 
-  uint8_t  nodeCount  = dataManager->getNodeCount();
-  uint8_t  measurementCount  = dataManager->getMeasurementCount();
+    // Create measurement
+    Measurement readMeasurement = dataManager->getMeasurement(measurementIndex);
 
-  Serial.print("Measurement count: ");
-  Serial.println(measurementCount);
-
-  dataManager->addNode(123498765);
-
-  Serial.println("Node list:");
-  for(int8_t i = 0; i < nodeCount; i++) {
-    Serial.print(i);
-    Serial.print(": ");
-    Serial.println(*(nodes + i));
-  }*/
-
-  /************************** RTC TEST **************************/ 
-
-
-  /*DS3232RTC Rtc(false);
-  Rtc.begin();
-  time_t myTime = Rtc.get();
-  Serial.print("Time since epoch: ");
-  Serial.println(myTime);*/
+    // Print initial measurement data
+    Serial.println("\nRead measurement information:");
+    Serial.print("Device: ");
+    Serial.println(readMeasurement.getNodeUUID());
+    Serial.print("Datetime: ");
+    Serial.println(readMeasurement.getDateTime());
+    Serial.print("Temp: ");
+    Serial.println(readMeasurement.getTemperature()/16.0); //Divided by 16.0 to get actual temperature in C
+    Serial.print("Salinity: ");
+    Serial.println(readMeasurement.getSalinity());
+    
+    //rtcManager->goToSleep();
+  #endif
 }
 
 void loop() {
@@ -77,8 +82,8 @@ void loop() {
   /************************** Life cycle **************************/ 
 
   // (1) Init hardware
-  sensorManager->enableSensors();
-  Serial.println("Successfully woke hardware");
+  //sensorManager->enableSensors();
+  //Serial.println("Successfully woke hardware");
   
   delay(1000);
 }

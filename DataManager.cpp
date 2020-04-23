@@ -40,17 +40,7 @@ DataManager* DataManager::instance = 0;
 DataManager::DataManager() {
   Serial.println("Starting data manager...");
 
-  // Check connection to FRAM
-  if(!Fram.begin(FRAM_I2C_ADDRESS)) {
-    Serial.println("Unable to initialize FRAM");
-    while (!Fram.begin(FRAM_I2C_ADDRESS)) delay(10000); // Keep trying to initialize FRAM chip every 10 seconds
-  }
-  Serial.println("FRAM successfully initialized");
-
-  // Format FRAM if needed
-  if(!isFramFormatted()){
-    formatFram();
-  }
+  enableHardware();
 
   Serial.print("Device UUID: ");
   Serial.println(Node::getUUID());
@@ -60,6 +50,21 @@ uint32_t DataManager::read32(uint16_t baseAddress) {
   uint32_t value = 0;
   
   for(uint8_t i = 0; i < 4; i++) {
+
+    // Read the value from Fram
+    uint8_t readValue = Fram.read8(baseAddress + i);
+
+    // Combine values from little endian format
+    value += readValue << (8*i);
+  }
+
+  return value;
+}
+
+uint16_t DataManager::read16(uint16_t baseAddress) {
+  uint16_t value = 0;
+  
+  for(uint8_t i = 0; i < 2; i++) {
 
     // Read the value from Fram
     uint8_t readValue = Fram.read8(baseAddress + i);
@@ -90,7 +95,7 @@ void DataManager::write32(uint16_t baseAddress, uint32_t value) {
 void DataManager::write16(uint16_t baseAddress, uint16_t value) {
 
   Fram.write8(baseAddress, value & 0xFF);
-  Fram.write8(baseAddress, (value >> 8) & 0xFF);
+  Fram.write8(baseAddress + 1, (value >> 8) & 0xFF);
 }
 
 bool DataManager::isFramFormatted() {
@@ -140,6 +145,28 @@ DataManager* DataManager::getInstance() {
   }
   
   return instance;
+}
+
+void DataManager::enableHardware() {
+
+  // Do nothing if already enabled
+  if(isEnabled) {
+    return;
+  }
+
+  // Check connection to FRAM
+  if(!Fram.begin(FRAM_I2C_ADDRESS)) {
+    Serial.println("Unable to initialize FRAM");
+    while (!Fram.begin(FRAM_I2C_ADDRESS)) delay(10000); // Keep trying to initialize FRAM chip every 10 seconds
+  }
+  Serial.println("FRAM successfully initialized");
+
+  // Format FRAM if needed
+  if(!isFramFormatted()){
+    formatFram();
+  }
+
+  ManagedHardware::enableHardware();
 }
 
 uint8_t DataManager::getNodeCount() {
@@ -216,7 +243,7 @@ uint8_t DataManager::addNode(uint32_t nodeUUID) {
   // Increment address by 4 to skip to the measurement propagation bits
   address += 4;
 
-  // Clears document propagation bytes
+  // Clears measurement propagation bytes
   for(uint16_t i = 0; i < NODE_SIZE-4; i++) {
     Fram.write8(address + i, 0);
   }
@@ -251,4 +278,30 @@ uint16_t DataManager::addMeasurement(Measurement measurement) {
 
   Serial.println("Measurement added.");
   return measurementCount;
+}
+
+Measurement DataManager::getMeasurement(uint16_t measurementIndex) {
+
+  // Get current measurement count and add one
+  uint16_t measurementCount = getMeasurementCount();
+
+  // Check that max nodes has not been reached
+  if(measurementIndex >= measurementCount) {
+    Serial.println("ERROR: Unable to get measurement. Index is higher than available measurements");
+    exit(1868001);
+  }
+
+  // Set address to the node base address for the next node
+  uint16_t address = MEASUREMENTS_BASE + measurementIndex * MEASUREMENT_SIZE;
+
+  // Read nodeUUID, datetime, temp, and salinity to FRAM
+  uint32_t nodeUUID = read32(address);
+  uint32_t datetime = read32(address + 4);
+  uint16_t temp = read16(address + 8);
+  uint16_t salinity = read16(address + 10);
+
+  // Create measurement object
+  Measurement measurement = Measurement(nodeUUID, datetime, temp, salinity);
+
+  return measurement;
 }
