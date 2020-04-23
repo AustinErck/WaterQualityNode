@@ -45,9 +45,13 @@ void SensorManager::initAccelerometer() {
   if(!accelerometer.begin(ACCEL_ADDRESS)) {
     Serial.println("Unable to initialize accelerometer");
     while (!accelerometer.begin(ACCEL_ADDRESS)) delay(10000); // Keep trying to initialize accelerometer chip every 10 seconds
+  } else {
+
+    // Configure accelerometer
+    accelerometer.setRange(MMA8451_RANGE_2_G);
+    
+    Serial.println("Accelerometer successfully initialized");
   }
-  accelerometer.setRange(MMA8451_RANGE_2_G);
-  Serial.println("Accelerometer successfully initialized");
 }
 
 void SensorManager::initThermometer() {
@@ -56,7 +60,7 @@ void SensorManager::initThermometer() {
   
   // Check connection to accelerometer
   if(!thermometer.search(thermometerAddress)) {
-    Serial.println("Unable to initialize accelerometer");
+    Serial.println("Unable to initialize thermometer");
 
     // Keep trying to initialize accelerometer chip every 10 seconds
     while (!thermometer.search(thermometerAddress)) {
@@ -140,7 +144,7 @@ uint16_t SensorManager::measureTemperature() {
   thermometer.write(0xBE);         // Read Scratchpad
 
   byte data[12];
-  for (byte i = 0; i < 9; i++) {           // we need 9 bytes
+  for (byte i = 0; i < 9; i++) { // we need 9 bytes
     data[i] = thermometer.read();
   }
 

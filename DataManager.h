@@ -7,9 +7,8 @@
   class DataManager {
     private:
       /********************** STATIC **********************/
-       
-      static uint32_t DEVICE_UUID;  // UUID of current node
-      static DataManager* instance; // Singleton instance of DataManager
+
+      static DataManager* instance;   // Singleton instance of DataManager
 
       /** 
        *  Get's the device's UUID 

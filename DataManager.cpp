@@ -31,6 +31,8 @@ Adafruit_FRAM_I2C Fram; //Rename FRAM class name to FRAM
 DataManager* DataManager::instance = 0;
 
 
+
+
 /************************** INSTANCE ***************************/
 
 /********************** Private Functions **********************/
