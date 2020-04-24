@@ -46,8 +46,18 @@ DataManager::DataManager() {
   Serial.println(Node::getUUID());
 }
 
+void DataManager::deviceDisabledCheck() {
+  if(!isEnabled) {
+    Serial.println("ERROR: DataManager cannot perform action as it is disabled");
+    exit(1868002);
+  }
+}
+
 uint32_t DataManager::read32(uint16_t baseAddress) {
   uint32_t value = 0;
+
+  // Check that device is enabled
+  deviceDisabledCheck();
   
   for(uint8_t i = 0; i < 4; i++) {
 
@@ -63,6 +73,9 @@ uint32_t DataManager::read32(uint16_t baseAddress) {
 
 uint16_t DataManager::read16(uint16_t baseAddress) {
   uint16_t value = 0;
+
+  // Check that device is enabled
+  deviceDisabledCheck();
   
   for(uint8_t i = 0; i < 2; i++) {
 
@@ -77,6 +90,9 @@ uint16_t DataManager::read16(uint16_t baseAddress) {
 }
 
 void DataManager::write32(uint16_t baseAddress, uint32_t value) {
+
+  // Check that device is enabled
+  deviceDisabledCheck();
   
   // For each byte of the 32 bit value
   for(uint8_t i = 0; i < 4; i++) {
@@ -94,6 +110,9 @@ void DataManager::write32(uint16_t baseAddress, uint32_t value) {
 
 void DataManager::write16(uint16_t baseAddress, uint16_t value) {
 
+  // Check that device is enabled
+  deviceDisabledCheck();
+
   Fram.write8(baseAddress, value & 0xFF);
   Fram.write8(baseAddress + 1, (value >> 8) & 0xFF);
 }
@@ -109,6 +128,9 @@ bool DataManager::isFramFormatted() {
 
 void DataManager::formatFram() {
   Serial.println("Formatting FRAM...");
+
+  // Check that device is enabled
+  deviceDisabledCheck();
   
   // Write device UUID to the first two words(4 bytes)
   write32(DEVICE_DATA_BASE, Node::getUUID());
@@ -161,15 +183,19 @@ void DataManager::enableHardware() {
   }
   Serial.println("FRAM successfully initialized");
 
+  // Update hardware state as enabled
+  ManagedHardware::enableHardware();
+    
   // Format FRAM if needed
   if(!isFramFormatted()){
     formatFram();
   }
-
-  ManagedHardware::enableHardware();
 }
 
 uint8_t DataManager::getNodeCount() {
+
+  // Check that device is enabled
+  deviceDisabledCheck();
 
   uint8_t temp = Fram.read8(DEVICE_DATA_BASE + DEVICE_NODE_COUNT_OFFSET);
   Serial.print("getNodeCount: ");
@@ -180,6 +206,10 @@ uint8_t DataManager::getNodeCount() {
 }
 
 uint16_t DataManager::getMeasurementCount() {
+
+  // Check that device is enabled
+  deviceDisabledCheck();
+  
   uint16_t measurementCount = Fram.read8(DEVICE_DATA_BASE + DEVICE_MEASUREMENT_COUNT_OFFSET);
 
   // Add second byte to measurement count
@@ -189,6 +219,9 @@ uint16_t DataManager::getMeasurementCount() {
 }
 
 uint32_t* DataManager::getNodes() {
+
+  // Check that device is enabled
+  deviceDisabledCheck();
 
   uint8_t nodeCount = getNodeCount();
 
@@ -209,8 +242,11 @@ uint32_t* DataManager::getNodes() {
   return nodes;
 }
 
-uint8_t DataManager::addNode(uint32_t nodeUUID) {
+uint8_t DataManager::addNode(uint32_t nodeUUID) {  
   Serial.println("Adding node...");
+
+  // Check that device is enabled
+  deviceDisabledCheck();
 
   // Get current node count
   uint8_t nodeCount = getNodeCount();
@@ -252,8 +288,11 @@ uint8_t DataManager::addNode(uint32_t nodeUUID) {
   return nodeCount;
 }
 
-uint16_t DataManager::addMeasurement(Measurement measurement) {
+uint16_t DataManager::addMeasurement(Measurement measurement) {  
   Serial.println("Adding measurement...");
+
+  // Check that device is enabled
+  deviceDisabledCheck();
 
   // Get current measurement count and add one
   uint16_t measurementCount = getMeasurementCount();
@@ -281,6 +320,9 @@ uint16_t DataManager::addMeasurement(Measurement measurement) {
 }
 
 Measurement DataManager::getMeasurement(uint16_t measurementIndex) {
+
+  // Check that device is enabled
+  deviceDisabledCheck();
 
   // Get current measurement count and add one
   uint16_t measurementCount = getMeasurementCount();

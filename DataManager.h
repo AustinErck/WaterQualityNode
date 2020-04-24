@@ -25,6 +25,11 @@
       DataManager();
 
       /**
+       * Handles show stopper errors
+       */
+      void deviceDisabledCheck();
+
+      /**
        * Reads 32 bits of data from FRAM
        * @param baseAddress: Base address to begin read at. Uses addresses baseAddress through (baseAddress + 4)
       */
