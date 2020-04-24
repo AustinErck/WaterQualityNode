@@ -1,8 +1,11 @@
+using namespace std;
+
 #include "DataManager.h"
 #include "Node.h"
 #include "Measurement.h"
 
 #include <Arduino.h>
+#include <bitset>
 #include "Adafruit_FRAM_I2C.h"
 
 #define FRAM_I2C_ADDRESS        80
@@ -16,8 +19,9 @@
 #define DEVICE_NODE_COUNT_OFFSET        5
 #define DEVICE_MEASUREMENT_COUNT_OFFSET 7 
 
-#define NODES_BASE    DEVICE_DATA_BASE + DEVICE_DATA_SIZE
-#define NODE_SIZE     274 * 2
+#define NODES_BASE        DEVICE_DATA_BASE + DEVICE_DATA_SIZE
+#define NODE_SIZE         274 * 2
+#define NODE_PROPAGATION  NODE_SIZE - 4
 
 #define MEASUREMENTS_BASE   NODES_BASE + (NODE_SIZE * MAX_NODES)
 #define MEASUREMENT_SIZE    6
@@ -43,7 +47,7 @@ DataManager::DataManager() {
   enableHardware();
 
   Serial.print("Device UUID: ");
-  Serial.println(Node::getUUID());
+  Serial.println(Node::DEVICE_UUID);
 }
 
 void DataManager::deviceDisabledCheck() {
@@ -122,8 +126,7 @@ bool DataManager::isFramFormatted() {
   // Read the first two words of FRAM
   uint32_t deviceUUID = read32(0);
 
-  // return false;
-  return Node::getUUID() == deviceUUID;
+  return Node::DEVICE_UUID == deviceUUID;
 }
 
 void DataManager::formatFram() {
@@ -133,7 +136,7 @@ void DataManager::formatFram() {
   deviceDisabledCheck();
   
   // Write device UUID to the first two words(4 bytes)
-  write32(DEVICE_DATA_BASE, Node::getUUID());
+  write32(DEVICE_DATA_BASE, Node::DEVICE_UUID);
 
   // Set the node count to initial value of 1
   setNodeCount(0);
@@ -142,7 +145,7 @@ void DataManager::formatFram() {
   setMeasurementCount(0);
 
   // Add current node as first node
-  addNode(Node::getUUID());
+  addNode(Node::DEVICE_UUID);
 }
 
 void DataManager::setNodeCount(uint8_t nodeCount) {
@@ -242,6 +245,96 @@ uint32_t* DataManager::getNodes() {
   return nodes;
 }
 
+uint64_t* DataManager::getMeasurementIds() {
+
+  // Check that device is enabled
+  deviceDisabledCheck();
+
+  uint16_t measurementCount = getMeasurementCount();
+
+  // Create a new array
+  uint64_t* measurementIds = new uint64_t[measurementCount];
+
+  // Set address initial value
+  uint16_t address = MEASUREMENTS_BASE;
+
+  // For each measurement, grab node and datetime
+  for(uint16_t i = 0; i < measurementCount; i++) {
+    // Increment address to next node
+    address += MEASUREMENT_SIZE;
+
+    // Read node UUID and add to node array
+    uint64_t measurementId = uint64_t(read32(address)) << 32;
+    measurementId += read32(address+4);
+
+    *(measurementIds + i) = measurementId;
+  }
+
+  return measurementIds;
+}
+
+bool DataManager::isMeasurementSynchronized(uint16_t measurementIndex) {
+
+  // Determine which byte offset
+  uint8_t bitOffset = measurementIndex % 8;
+  uint16_t byteOffset =  4 + measurementIndex / 8; //Add constant 4 for node uuid 
+
+  // Get current node count
+  uint8_t nodeCount = getNodeCount();
+
+  // Assume measurement is synchronized
+  bool isSynchronized = true;
+
+  // Clears measurement propagation bytes
+  for(uint16_t i = 0; i < nodeCount; i++) {
+
+    // Determine node's base address and added the byte offset
+    uint16_t nodeAddress = NODES_BASE + i * NODE_SIZE;
+    nodeAddress += byteOffset;
+
+    // Read value from FRAM
+    uint8_t readValue = Fram.read8(nodeAddress);
+
+    bitset<8> readValueBitBlasted(readValue);
+
+    if(readValueBitBlasted[bitOffset] != 1) {
+      isSynchronized = false;
+      break;
+    }
+  }
+  
+  return isSynchronized;
+}
+
+Measurement DataManager::getMeasurement(uint16_t measurementIndex) {
+
+  // Check that device is enabled
+  deviceDisabledCheck();
+
+  // Get current measurement count and add one
+  uint16_t measurementCount = getMeasurementCount();
+
+  // Check that max nodes has not been reached
+  if(measurementIndex >= measurementCount) {
+    Serial.println("ERROR: Unable to get measurement. Index is higher than available measurements");
+    exit(1868001);
+  }
+
+  // Set address to the node base address for the next node
+  uint16_t address = MEASUREMENTS_BASE + measurementIndex * MEASUREMENT_SIZE;
+
+  // Read nodeUUID, datetime, temp, and salinity to FRAM
+  uint32_t nodeUUID = read32(address);
+  uint32_t datetime = read32(address + 4);
+  uint16_t temp = read16(address + 8);
+  uint16_t salinity = read16(address + 10);
+
+  // Create measurement object
+  Measurement measurement = Measurement(nodeUUID, datetime, temp, salinity);
+
+  return measurement;
+}
+
 uint8_t DataManager::addNode(uint32_t nodeUUID) {  
   Serial.println("Adding node...");
 
@@ -280,9 +373,12 @@ uint8_t DataManager::addNode(uint32_t nodeUUID) {
   address += 4;
 
   // Clears measurement propagation bytes
-  for(uint16_t i = 0; i < NODE_SIZE-4; i++) {
+  for(uint16_t i = 0; i < NODE_PROPAGATION; i++) {
     Fram.write8(address + i, 0);
   }
+
+  // Dealloc nodes
+  delete[] nodes;
 
   Serial.println("Node added.");
   return nodeCount;
@@ -317,33 +413,4 @@ uint16_t DataManager::addMeasurement(Measurement measurement) {
 
   Serial.println("Measurement added.");
   return measurementCount;
-}
-
-Measurement DataManager::getMeasurement(uint16_t measurementIndex) {
-
-  // Check that device is enabled
-  deviceDisabledCheck();
-
-  // Get current measurement count and add one
-  uint16_t measurementCount = getMeasurementCount();
-
-  // Check that max nodes has not been reached
-  if(measurementIndex >= measurementCount) {
-    Serial.println("ERROR: Unable to get measurement. Index is higher than available measurements");
-    exit(1868001);
-  }
-
-  // Set address to the node base address for the next node
-  uint16_t address = MEASUREMENTS_BASE + measurementIndex * MEASUREMENT_SIZE;
-
-  // Read nodeUUID, datetime, temp, and salinity to FRAM
-  uint32_t nodeUUID = read32(address);
-  uint32_t datetime = read32(address + 4);
-  uint16_t temp = read16(address + 8);
-  uint16_t salinity = read16(address + 10);
-
-  // Create measurement object
-  Measurement measurement = Measurement(nodeUUID, datetime, temp, salinity);
-
-  return measurement;
 }

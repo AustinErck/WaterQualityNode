@@ -1,6 +1,13 @@
 #include "CommunicationManager.h"
+#include "DataManager.h"
 
 #include <Arduino.h>
+
+// Transmit constants
+#define ROUNDS            2                                   // A round is <node count> * 2 * <transmit window> + <transmit buffer> ms (includes both transmit and ack sections)
+#define TRANSMIT_WINDOW   28 * 1000                           // ms a single node has to transmit data in
+#define TRANSMIT_BUFFER   2 * 1000                            // ms between transmit windows
+#define TRANSMIT_BLOCK    TRANSMIT_WINDOW + TRANSMIT_BUFFER   // A block is the transmit window and following buffer.
 
 #define Xbee Serial2
 
@@ -36,7 +43,7 @@ void CommunicationManager::transmitMeasurement(Measurement measurement) {
   deviceDisabledCheck();
 
   // Get buffer
-  byte* measurementBuffer = measurement.getBuffer();
+  byte* measurementBuffer = measurement.getBuffer(Node::DEVICE_UUID);
 
   // Transmit data
   Xbee.readBytes(measurementBuffer, Measurement::MEASUREMENT_BUFFER_LENGTH);
@@ -45,7 +52,7 @@ void CommunicationManager::transmitMeasurement(Measurement measurement) {
   delete [] measurementBuffer;
 }
 
-Measurement CommunicationManager::recieveMeasurement() {
+Measurement* CommunicationManager::recieveMeasurement() {
   
   // Check that device is enabled
   deviceDisabledCheck();
@@ -66,8 +73,13 @@ Measurement CommunicationManager::recieveMeasurement() {
     Xbee.readBytes(readBuffer, Measurement::MEASUREMENT_BUFFER_LENGTH);
 
     // Convert readBuffer into measurement
-    return Measurement(&readBuffer, Measurement::MEASUREMENT_BUFFER_LENGTH);
+    uint8_t bufferLength = Measurement::MEASUREMENT_BUFFER_LENGTH;
+    Measurement* measurement = new Measurement((unsigned char *)readBuffer, bufferLength);
+    
+    return measurement;
   }
+
+  return nullptr;
 }
 
 
@@ -103,5 +115,37 @@ void CommunicationManager::disableHardware() {
 
 void CommunicationManager::performDataSync() {
 
+  // Determine which index the node is in node list
+  uint8_t nodeTransmitIndex = 0;
+  for(uint8_t index = 0; index < Node::DEVICE_COUNT; index++) {
+    if(Node::DEVICE_UUIDS[index] == Node::DEVICE_UUID) {
+      nodeTransmitIndex = index;
+    }
+  }
 
+  // Determine start and end offset
+  uint16_t startOffset = nodeTransmitIndex * TRANSMIT_BLOCK;
+  uint16_t endOffset = startOffset + TRANSMIT_WINDOW;
+
+  // Get DataManager instance
+  DataManager* dataManager = DataManager::getInstance();
+
+  // Get list of measurements to transmit
+  uint16_t measurementCount = dataManager->getMeasurementCount();
+  for(int16_t measurementIndex = 0; measurementIndex < measurementCount; measurementIndex++) {
+    
+  }
+
+  // Track measurements recieved and which prop bits to update
+
+  //While in sync frame
+  //If in transmit window
+  //  transmit measurement one at a time with gap in between
+  //If NOT in transmit window
+  //  Listen for measurements
+  //  If new add to FRAM
+  //  Then update prop bits new or not
+
+  // Update prop bits
+  // If all prop bits active, freeze data
 }

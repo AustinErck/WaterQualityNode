@@ -10,12 +10,6 @@
       /********************** STATIC **********************/
 
       static DataManager* instance;   // Singleton instance of DataManager
-
-      /** 
-       *  Get's the device's UUID 
-       *  @return Device's UUID
-      */
-      static uint32_t getDeviceUUID();
   
       /********************** INSTANCE **********************/
 
@@ -105,6 +99,22 @@
       uint32_t* getNodes();
 
       /**
+       * Gets a pointer to a list of measurement ids
+       */
+      uint64_t* getMeasurementIds();
+
+      /**
+       * Checks if a measurement is synchronized between all nodes
+       */
+      bool isMeasurementSynchronized(uint16_t measurementIndex);
+
+      /**
+       * Get measurement from FRAM
+       * @param measurementIndex: Index of measurement
+      */
+      Measurement getMeasurement(uint16_t measurementIndex);
+
+      /**
        * Add node to FRAM
        * @param nodeUUID: UUID of the node
       */
@@ -115,11 +125,5 @@
        * @param measurement: Measurement to save
       */
       uint16_t addMeasurement(Measurement measurement);
-
-      /**
-       * Get measurement from FRAM
-       * @param measurementIndex: Index of measurement
-      */
-      Measurement getMeasurement(uint16_t measurementIndex);
   };
 #endif

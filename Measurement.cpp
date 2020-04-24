@@ -4,7 +4,7 @@
 
 Measurement::Measurement(uint16_t measuredTemp, uint16_t measuredSalinity) {
   RtcManager* rtcManager = RtcManager::getInstance();
-  node = Node::getUUID();
+  node = Node::DEVICE_UUID;
   datetime = rtcManager->getDatetime();
   temp = measuredTemp;
   salinity = measuredSalinity;
@@ -32,7 +32,7 @@ Measurement::Measurement(byte* measurementArray, uint8_t arrayLength) {
   salinity = (measurementArray[11] << 8) + measurementArray[10];
 
   // Determine expectedSum
-  uint16_t expectedSum = (measurementArray[11] << 8) + measurementArray[10];
+  uint16_t expectedSum = (measurementArray[17] << 8) + measurementArray[16];
 
   uint16_t sum = 0;
   for(uint8_t i = 0; i < arrayLength-2; i++) {
@@ -61,7 +61,7 @@ uint16_t Measurement::getSalinity() {
   return salinity;
 }
 
-byte* Measurement::getBuffer() {
+byte* Measurement::getBuffer(uint32_t currentNodeUUID) {
 
   // Create buffer with measurement data
   byte* measurementBuffer = new byte[Measurement::MEASUREMENT_BUFFER_LENGTH];
@@ -77,6 +77,10 @@ byte* Measurement::getBuffer() {
   measurementBuffer[9] = (temp >> 8) & 0xFF;
   measurementBuffer[10] = salinity & 0xFF;
   measurementBuffer[11] = (salinity >> 8) & 0xFF;
+  measurementBuffer[12] = currentNodeUUID & 0xFF;
+  measurementBuffer[13] = (currentNodeUUID >> 8)  & 0xFF;
+  measurementBuffer[14] = (currentNodeUUID >> 16)  & 0xFF;
+  measurementBuffer[15] = (currentNodeUUID >> 24)  & 0xFF;
 
   // Calculate sum of all measurement data
   uint16_t sum = 0;
@@ -85,8 +89,8 @@ byte* Measurement::getBuffer() {
   }
 
   // Add sum to buffer
-  measurementBuffer[10] = sum & 0xFF;
-  measurementBuffer[11] = (sum >> 8) & 0xFF;
+  measurementBuffer[16] = sum & 0xFF;
+  measurementBuffer[17] = (sum >> 8) & 0xFF;
   
   return measurementBuffer;
 }

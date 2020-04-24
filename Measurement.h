@@ -22,7 +22,7 @@
 
     public:
 
-      static uint8_t const MEASUREMENT_BUFFER_LENGTH = 14;
+      static uint8_t const MEASUREMENT_BUFFER_LENGTH = 18;
 
       /**
        * Create a new measurement
@@ -62,6 +62,6 @@
       /**
        * Get buffer with measurement's data
        */
-      byte* getBuffer();
+      byte* getBuffer(uint32_t currentNodeUUID);
   };
 #endif

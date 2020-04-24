@@ -33,7 +33,7 @@
        * Read measurement from serial
        * @return measurement: Measurement recieved
       */
-      Measurement recieveMeasurement();
+      Measurement* recieveMeasurement();
   
     public:
     
